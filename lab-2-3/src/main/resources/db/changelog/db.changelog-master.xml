@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Тег для отслеживания версии -->
+    <changeSet id="initial-tag" author="ustenko">
+        <tagDatabase tag="v1.0.0-init"/>
+    </changeSet>
+
+    <!-- Подключаем файл с созданием таблицы -->
+    <include relativeToChangelogFile="true"
+             file="ddl/2026-03-31--create-table-restaurant.xml"/>
+
+</databaseChangeLog>

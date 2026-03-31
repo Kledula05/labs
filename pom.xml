@@ -12,6 +12,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>lab-1</module>
+        <module>lab-2-3</module>
     </modules>
 
     <properties>
