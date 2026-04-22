@@ -9,16 +9,17 @@ import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Properties;
 
 public class ConnectionConfig {
 
-    public static DataSource createDataSource() {
+    public DataSource createDataSource() {
         Properties properties = loadProperties();
 
-        // настраиваем пул соединений HikariCP
+
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(properties.getProperty("db.url"));
         hikariConfig.setUsername(properties.getProperty("db.username"));
@@ -31,7 +32,7 @@ public class ConnectionConfig {
         System.out.println("Инициализация пула соединений HikariCP...");
         HikariDataSource dataSource = new HikariDataSource(hikariConfig);
 
-        // инициализируем Liquibase для создания таблиц
+
         try {
             initializeLiquibase(dataSource);
             System.out.println("Liquibase: таблицы созданы успешно.");
@@ -43,11 +44,8 @@ public class ConnectionConfig {
         return dataSource;
     }
 
-    private static void initializeLiquibase(DataSource dataSource) throws Exception {
-        Connection connection = null;
-        try {
-            connection = dataSource.getConnection();
-
+    private void initializeLiquibase(DataSource dataSource) throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
 
@@ -58,28 +56,23 @@ public class ConnectionConfig {
             );
 
             liquibase.update();
-
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    System.out.println("Не удалось закрыть соединение: " + e.getMessage());
-                }
-            }
         }
     }
 
-    private static Properties loadProperties() {
+    private Properties loadProperties() {
         Properties properties = new Properties();
 
-        properties.setProperty("db.url", "jdbc:postgresql://localhost:5432/postgres");
-        properties.setProperty("db.username", "postgres");
-        properties.setProperty("db.password", "123");
-        properties.setProperty("db.pool.size", "5");
+        try (InputStream inputStream = getClass().getClassLoader()
+                .getResourceAsStream("db.properties")) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Файл db.properties не найден в classpath");
+            }
+            properties.load(inputStream);
+        } catch (IOException e) {
+            throw new IllegalStateException("Не удалось загрузить db.properties", e);
+        }
 
         System.out.println("Настройки подключения загружены.");
-
         return properties;
     }
 }

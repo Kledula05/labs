@@ -7,14 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RestaurantRepositoryJdbc implements RestaurantRepository {
-
-    private static final String SQL_CREATE_TABLE =
-            "CREATE TABLE IF NOT EXISTS restaurant (" +
-                    "id SERIAL PRIMARY KEY, " +
-                    "name VARCHAR(255) NOT NULL, " +
-                    "rating DOUBLE PRECISION NOT NULL" +
-                    ")";
+public class JdbcRestaurantRepository implements RestaurantRepository {
 
     private static final String SQL_INSERT =
             "INSERT INTO restaurant (name, rating) VALUES (?, ?) RETURNING id";
@@ -33,71 +26,62 @@ public class RestaurantRepositoryJdbc implements RestaurantRepository {
 
     private final DataSource dataSource;
 
-    public RestaurantRepositoryJdbc(DataSource dataSource) {
+    public JdbcRestaurantRepository(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-
-
     @Override
     public int save(RestaurantEntity restaurant) {
-        // сохраняем ресторан и возвращаем его id
-        int id = -1;
-
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(SQL_INSERT)) {
 
             statement.setString(1, restaurant.getName());
             statement.setDouble(2, restaurant.getRating());
 
-            ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                id = resultSet.getInt("id");
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("id");
+                }
             }
 
         } catch (SQLException e) {
-            System.out.println("Ошибка при сохранении: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Ошибка при сохранении ресторана", e);
         }
 
-        return id;
+        throw new RuntimeException("Не удалось получить id после сохранения ресторана");
     }
 
     @Override
     public RestaurantEntity findById(int id) {
-        // ищем ресторан по id
-        RestaurantEntity restaurant = null;
-
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(SQL_FIND_BY_ID)) {
 
             statement.setInt(1, id);
-            ResultSet resultSet = statement.executeQuery();
 
-            if (resultSet.next()) {
-                restaurant = new RestaurantEntity();
-                restaurant.setId(resultSet.getInt("id"));
-                restaurant.setName(resultSet.getString("name"));
-                restaurant.setRating(resultSet.getDouble("rating"));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    RestaurantEntity restaurant = new RestaurantEntity();
+                    restaurant.setId(resultSet.getInt("id"));
+                    restaurant.setName(resultSet.getString("name"));
+                    restaurant.setRating(resultSet.getDouble("rating"));
+                    return restaurant;
+                }
             }
 
         } catch (SQLException e) {
-            System.out.println("Ошибка поиска id=" + id + ": " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Ошибка при поиске ресторана по id=" + id, e);
         }
 
-        return restaurant;
+        return null;
     }
 
     @Override
     public List<RestaurantEntity> findAll() {
-        // получаем все рестораны из базы
         List<RestaurantEntity> restaurants = new ArrayList<>();
 
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(SQL_FIND_ALL)) {
-
-            ResultSet resultSet = statement.executeQuery();
+             PreparedStatement statement = connection.prepareStatement(SQL_FIND_ALL);
+             ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
                 RestaurantEntity restaurant = new RestaurantEntity();
@@ -108,8 +92,7 @@ public class RestaurantRepositoryJdbc implements RestaurantRepository {
             }
 
         } catch (SQLException e) {
-            System.out.println("Ошибка при получении списка: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Ошибка при получении списка ресторанов", e);
         }
 
         return restaurants;
@@ -117,9 +100,6 @@ public class RestaurantRepositoryJdbc implements RestaurantRepository {
 
     @Override
     public boolean update(RestaurantEntity restaurant) {
-        // обновляем ресторан по id
-        boolean updated = false;
-
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(SQL_UPDATE)) {
 
@@ -128,19 +108,15 @@ public class RestaurantRepositoryJdbc implements RestaurantRepository {
             statement.setInt(3, restaurant.getId());
 
             int rows = statement.executeUpdate();
-            updated = rows > 0;
+            return rows > 0;
 
         } catch (SQLException e) {
-            System.out.println("Ошибка обновления: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Ошибка при обновлении ресторана id=" + restaurant.getId(), e);
         }
-
-        return updated;
     }
 
     @Override
     public void deleteById(int id) {
-        // удаляем ресторан по id
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(SQL_DELETE_BY_ID)) {
 
@@ -148,8 +124,7 @@ public class RestaurantRepositoryJdbc implements RestaurantRepository {
             statement.executeUpdate();
 
         } catch (SQLException e) {
-            System.out.println("Ошибка удаления id=" + id + ": " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Ошибка при удалении ресторана id=" + id, e);
         }
     }
 }
