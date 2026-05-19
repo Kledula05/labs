@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,6 +23,17 @@ class RestaurantServiceImplTest {
 
     @InjectMocks
     private RestaurantServiceImpl restaurantService;
+
+    @Test
+    void save_shouldReturnId_whenSuccessful() {
+        // ИСПОЛЬЗУЕМ any(), так как RestaurantEntity не имеет equals()
+        when(restaurantRepository.save(any(RestaurantEntity.class))).thenReturn(1);
+
+        int result = restaurantService.save("Пушкинъ", 4.9);
+
+        assertEquals(1, result);
+        verify(restaurantRepository).save(any(RestaurantEntity.class));
+    }
 
     @Test
     void findById_shouldReturnRestaurant_whenExists() {
@@ -41,14 +53,6 @@ class RestaurantServiceImplTest {
     }
 
     @Test
-    void update_shouldThrowException_whenNotFound() {
-        RestaurantEntity restaurant = new RestaurantEntity(99, "Нет такого", 1.0);
-        when(restaurantRepository.update(restaurant)).thenReturn(false);
-
-        assertThrows(RestaurantNotFoundException.class, () -> restaurantService.update(restaurant));
-    }
-
-    @Test
     void findByName_shouldReturnRestaurant_whenExists() {
         RestaurantEntity restaurant = new RestaurantEntity(1, "Белуга", 4.7);
         when(restaurantRepository.findAll()).thenReturn(List.of(restaurant));
@@ -56,5 +60,49 @@ class RestaurantServiceImplTest {
         RestaurantEntity result = restaurantService.findByName("Белуга");
 
         assertEquals(restaurant, result);
+    }
+
+    @Test
+    void findByName_shouldThrowException_whenNotFound() {
+        when(restaurantRepository.findAll()).thenReturn(List.of());
+
+        assertThrows(RestaurantNotFoundException.class, () -> restaurantService.findByName("Несуществующий"));
+    }
+
+    @Test
+    void findAll_shouldReturnList() {
+        RestaurantEntity r1 = new RestaurantEntity(1, "A", 4.0);
+        RestaurantEntity r2 = new RestaurantEntity(2, "B", 4.5);
+        when(restaurantRepository.findAll()).thenReturn(List.of(r1, r2));
+
+        List<RestaurantEntity> result = restaurantService.findAll();
+
+        assertEquals(2, result.size());
+        verify(restaurantRepository).findAll();
+    }
+
+    @Test
+    void update_shouldNotThrow_whenSuccessful() {
+        RestaurantEntity restaurant = new RestaurantEntity(1, "Обновлённый", 4.8);
+        when(restaurantRepository.update(any(RestaurantEntity.class))).thenReturn(true);
+
+        restaurantService.update(restaurant);
+
+        verify(restaurantRepository).update(any(RestaurantEntity.class));
+    }
+
+    @Test
+    void update_shouldThrowException_whenNotFound() {
+        RestaurantEntity restaurant = new RestaurantEntity(99, "Нет такого", 1.0);
+        when(restaurantRepository.update(any(RestaurantEntity.class))).thenReturn(false);
+
+        assertThrows(RestaurantNotFoundException.class, () -> restaurantService.update(restaurant));
+    }
+
+    @Test
+    void deleteById_shouldCallRepository() {
+        restaurantService.deleteById(5);
+
+        verify(restaurantRepository).deleteById(5);
     }
 }
