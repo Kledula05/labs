@@ -26,7 +26,7 @@ class RestaurantServiceImplTest {
 
     @Test
     void save_shouldReturnId_whenSuccessful() {
-        // ИСПОЛЬЗУЕМ any(), так как RestaurantEntity не имеет equals()
+        // когда у restaurantRepository будет вызван save с любым RestaurantEntity тогда верни 1 :)
         when(restaurantRepository.save(any(RestaurantEntity.class))).thenReturn(1);
 
         int result = restaurantService.save("Пушкинъ", 4.9);
